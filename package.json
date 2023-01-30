@@ -1,0 +1,16 @@
+{
+  "name": "lb-watch",
+  "version": "0.0.1",
+  "description": "Watches load balancer nodes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "BD",
+  "license": "ISC",
+  "dependencies": {
+
+    "fetch": "^1.1.0",
+    "https": "^1.0.0"
+  }
+}

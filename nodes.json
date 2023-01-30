@@ -1,0 +1,12 @@
+[
+    {
+       "hostName":"host1",
+       "host":"192.168.1.1",
+       "cluster":"cluster1"
+    },
+    {
+      "hostName":"host2",
+      "host":"192.168.1.2",
+      "cluster":"cluster2"
+   }
+ ]
