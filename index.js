@@ -101,7 +101,7 @@ exports.handler = async function (event, context) {
 
 // local testing
 
-// exports.handler({"queryStringParameters": {cluster: "gws-mobile"}}, {}).then((res) => {
+// exports.handler({"queryStringParameters": {cluster: "cluster1"}}, {}).then((res) => {
 /* exports.handler({ queryStringParameters: {} }, {}).then((res) => {
 	res.forEach((cluster) => {
 		cluster.forEach((node) => {
