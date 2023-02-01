@@ -1,58 +1,19 @@
 /*jshint esversion: 8 */
-
-
 const https = require("https");
 const fetchUrl = require("fetch").fetchUrl;
+const config = require("./config");
 
 // because the nodes' SSL cert doesn't match the URL,
 const httpsAgent = new https.Agent({
 	rejectUnauthorized: false,
 });
 
-/*
- *  CONFIG
- */
-
-// sets the timeout for the node tests.
-const requestTimeout = 5;
-
-// sets the name of the clusters
-const clusters = ["cluster1", "cluster2"];
-
-/* These two functions are for testing if the node is in the LB */
-// this is a function that is past as a parameter to test the health check response
-const inLbTest = (response) => {
-	if (response.body.toString().substr(0, 6) == "--OK--") return true;
-	return false;
-};
-
-// The format of the health check URL
-const inLbUrl = (node) => {
-	return `https://${node.host}/servertest/test.html`;
-};
-
-/* These two functions are for testing if the node is in fact healthy */
-// this is a function that is past as a parameter to test the actual api
-const healthCheckTest = (response) => {
-	if (response.meta.status == 200) return true;
-	return false;
-};
-
-// The format of the health check URL
-const healthCheckUrl = (node) => {
-	return `https://${node.host}/api.html`;
-};
-
-/*
- *  END OF CONFIG
- */
-
 // Takes a URL and a function that tests the response and returns a boolean
 const checkNode = (url, testFunc) => {
 	return new Promise((resolve, reject) => {
 		fetchUrl(
 			url,
-			{ agentHttps: httpsAgent, timeout: requestTimeout * 1000 },
+			{ agentHttps: httpsAgent, timeout: config.requestTimeout * 1000 },
 			function (error, meta, body) {
 				// package the response into an object to pass to the test func
 				const response = { error: error, meta: meta, body: body };
@@ -80,9 +41,11 @@ const checkCluster = async (clusterName, nodes) => {
 		let node = nodes[index];
 
 		if (node.cluster == clusterName) {
-			node.isInLb = await checkNode(inLbUrl(node), inLbTest);
-			node.apiStatus = await checkNode(healthCheckUrl(node), healthCheckTest);
-
+			node.isInLb = await checkNode(config.inLbUrl(node), config.inLbTest);
+			node.apiStatus = await checkNode(
+				config.healthCheckUrl(node),
+				config.healthCheckTest
+			);
 			results.push(node);
 		}
 	}
@@ -90,34 +53,66 @@ const checkCluster = async (clusterName, nodes) => {
 };
 
 // handles all the clusters
-const checkClusters = async (nodes) => {
+const checkClusters = async (clusters, nodes, clusterToCheck) => {
 	let clusterStatus = [];
 	for (let index = 0; index < clusters.length; index++) {
 		let clusterName = clusters[index];
-		clusterStatus.push(await checkCluster(clusterName, nodes));
+		if (clusterToCheck == "all") {
+			clusterStatus.push(await checkCluster(clusterName, nodes));
+		} else {
+			if (clusterName == clusterToCheck)
+				clusterStatus.push(await checkCluster(clusterName, nodes));
+		}
 	}
 	return clusterStatus;
 };
 
-// lambda framework
-exports.handler = async function (event, context) {
-	// load the nodes from the JSON config file and then check the clusters
-	let nodes = require("./nodes.json");
-	return checkClusters(nodes);
-};
+const checkOverallHealth = (clusters) => {
+	let overallHealth = true;
 
-// local testing
-/* exports.handler({}, {}).then((res) => {
-	// console.log(JSON.stringify(res));
-
-	res.forEach(cluster => {
-		
-		cluster.forEach(node => {
-			console.log(`${node.hostName} (${node.cluster}: ${node.host}) good:`,  (node.isInLb && node.apiStatus))
-			if (!(node.isInLb || node.apiStatus))
-				console.log('In LB:', node.isInLb, 'and healthy:', node.apiStatus)
+	clusters.forEach((cluster) => {
+		cluster.forEach((node) => {
+			if (node.isInLb == false || node.apiStatus == false)
+				overallHealth = false;
 		});
 	});
 
-}); 
-*/
+	return overallHealth;
+};
+
+// lambda framework
+exports.handler = async function (event, context) {
+	let clusterHealth;
+
+	if ( 	// if a cluster name is passed into the query params, only check that cluster
+		typeof event.queryStringParameters !== "undefined" &&
+		typeof event.queryStringParameters.cluster !== "undefined"
+	) {
+		clusterHealth = checkClusters(
+			config.clusters,
+			config.nodes,
+			event.queryStringParameters.cluster
+		);
+	} else {
+		clusterHealth = checkClusters(config.clusters, config.nodes, "all");
+	}
+	return clusterHealth;
+};
+
+// local testing
+
+// exports.handler({"queryStringParameters": {cluster: "gws-mobile"}}, {}).then((res) => {
+/* exports.handler({ queryStringParameters: {} }, {}).then((res) => {
+	res.forEach((cluster) => {
+		cluster.forEach((node) => {
+			console.log(
+				`${node.hostName} (${node.cluster}: ${node.host}) good:`,
+				node.isInLb && node.apiStatus
+			);
+			if (!(node.isInLb || node.apiStatus))
+				console.log("In LB:", node.isInLb, "and healthy:", node.apiStatus);
+		});
+	});
+
+	if (checkOverallHealth(res) == false) console.log("overallhealth : not good");
+}); */
