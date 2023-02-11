@@ -80,27 +80,48 @@ const checkOverallHealth = (clusters) => {
 	return overallHealth;
 };
 
+removeHealthyNodes = (clusters) => {
+	let returnClusters = [];
+
+	// create a new array that has only the unhealthy nodes and return that
+	clusters.forEach(cluster => {
+		cluster.forEach(node => {
+			if (node.isInLb == false || node.apiStatus == false) 
+				returnClusters.push(node);
+		});
+	});
+	
+	return returnClusters;
+};
+
 // lambda framework
 exports.handler = async function (event, context) {
-	let clusterHealth;
+	let clusterHealth = [];
 
-	if ( 	// if a cluster name is passed into the query params, only check that cluster
-		typeof event.queryStringParameters !== "undefined" &&
-		typeof event.queryStringParameters.cluster !== "undefined"
-	) {
-		clusterHealth = checkClusters(
+	if (typeof event.queryStringParameters === "undefined" || event.queryStringParameters === {}) {
+		clusterHealth = await checkClusters(config.clusters, config.nodes, "all");	
+		return clusterHealth;
+	}
+
+	// if a cluster name is passed into the query params, only check that cluster
+	if (typeof event.queryStringParameters.cluster !== "undefined") {
+		clusterHealth = await checkClusters(
 			config.clusters,
 			config.nodes,
 			event.queryStringParameters.cluster
 		);
-	} else {
-		clusterHealth = checkClusters(config.clusters, config.nodes, "all");
+
+	// if "badnodes" is passed in as a query param, only return the bad nodes
+	} else if (typeof event.queryStringParameters.badnodes !== "undefined")	{	
+		clusterHealth = await checkClusters(config.clusters, config.nodes, "all");
+		clusterHealth = removeHealthyNodes(clusterHealth);
 	}
+	
 	return clusterHealth;
 };
 
 // local testing
-
+// exports.handler({"queryStringParameters": {badnodes: "true"}}, {}).then((res) => {
 // exports.handler({"queryStringParameters": {cluster: "cluster1"}}, {}).then((res) => {
 /* exports.handler({ queryStringParameters: {} }, {}).then((res) => {
 	res.forEach((cluster) => {
