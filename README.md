@@ -7,10 +7,16 @@ As configured in the repo, the function checks for 2 things in each individual n
 - The API loads with a 200
 
 All config is done in `config.js`
-- It has all the  nodes
+- It has all the nodes
 - There is a timeout (in seconds) at the beginning of the file (requestTimeout)
 - There is a a list of cluster names: 
 `const clusters = ["cluster1", "cluster2"];`
-- Four functions: `inLbTest(), inLbUrl(), healthCheckTest(), healthCheckUrl()`
+- Five functions: `inLbTest(), inLbUrl(), healthCheckTest(), healthCheckUrl(), resultsHandler()`
+- `resultsHandler()` lets you process and take action on the results.  In the way written, if 
+  there is a env variable called SLACK_STATUS = true, it will send a slack message with configured
+  HOOK_URL webhook env var and to the channel, CHANNEL from the SENDER env var.
 
-When deployed as a lambda, you can pass a ?*cluster*=*name* to only test a single cluster
+
+When deployed as a lambda with a function URL, you can:
+- pass a ?*cluster*=*name* to only test a single cluster
+- pass a ?badnodes to only return the badnodes in the results
