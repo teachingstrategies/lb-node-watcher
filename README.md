@@ -13,10 +13,10 @@ All config is done in `config.js`
 `const clusters = ["cluster1", "cluster2"];`
 - Five functions: `inLbTest(), inLbUrl(), healthCheckTest(), healthCheckUrl(), resultsHandler()`
 - `resultsHandler()` lets you process and take action on the results.  In the way written, if 
-  there is a env variable called SLACK_STATUS = true, it will send a slack message with configured
-  HOOK_URL webhook env var and to the channel, CHANNEL from the SENDER env var.
+  there is a env variable called `SLACK_STATUS` = true, it will send a slack message with configured
+  `HOOK_URL` webhook env var and to the channel, `CHANNEL` from the `SENDER` env var.
 
 
 When deployed as a lambda with a function URL, you can:
-- pass a ?*cluster*=*name* to only test a single cluster
-- pass a ?badnodes to only return the badnodes in the results
+- pass a `?*cluster*=*name*` to only test a single cluster
+- pass a `?badnodes` to only return the badnodes in the results
